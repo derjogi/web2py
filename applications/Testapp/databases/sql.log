@@ -104,3 +104,6 @@ success!
 DELETE FROM ncbi;
 DELETE FROM sqlite_sequence WHERE name='ncbi';
 success!
+DELETE FROM ncbi;
+DELETE FROM sqlite_sequence WHERE name='ncbi';
+success!

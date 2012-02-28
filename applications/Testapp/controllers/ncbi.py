@@ -91,66 +91,91 @@ def download():
     handle.close()
     count=int(record["Count"])
     
-    # get a list of file id's, compare them with db, if not in db then download (and write data and ID into DB... still to come).    
-    print "Compare files with DB..."
-    recList=record['IdList']
+    '''
+    Create a List of entries found on entrez.
+    Fill DB: Create a list of files on the system, compare it with IDs in the DB.
+    Compare DB with Entrez records
+    Download everything from Entrez not in the DB
+    '''
+    
+    ### Create Lists...
+    # ... of IDs found on entrez:
+    recList=record['IdList']    
+    print "\nThese records have been found: "
     print recList
     
-    print "\n\n\nFiles in DB:"
+    # ...of entries in DB
+    dbIdList=[]
     for row in db(db.ncbi).select(db.ncbi.IdList):
-        print row
-
-        if row.IdList in recList:
-            recList.remove(row.IdList)
-
-        
-    # get dir "NCBI_Files/" and all Filenames
-    # remove xml from filename
-    # compare. if it's there: remove from reclist, if not, download! 
+        dbIdList.append(row.IdList)
+    print "\nThese Records are already in the DB: "
+    print dbIdList
     
+
+    # ...of Files in Folder: 
     dirList=os.listdir("NCBI_Files")
-    i=0
+    fileIdList=[]
     for fname in dirList:
-        i+=1
         splitted=fname.split('.')
-        if splitted[0] in recList:
-            recList.remove(splitted[0])
+        fileIdList.append(splitted[0])
+    print "\nThese Files are already downloaded: "
+    print fileIdList
         
-        print fname
-        
-        file=open("NCBI_Files/"+fname)
-        rec=Entrez.read(file)
-        print "Nächster Eintrag: "
-        print rec
-        raw_input(file)
-        file.close()
-            
-        if i==4:
-            break
-            
-    print "Nach überprüfung: "
-    print recList
-    
-    cont=raw_input("Continue?")
-    if cont!="y":
-        redirect(URL('search'))
-        
-    elif cont=="n":
-        session.cont='no'
-        
-    # Download    
-    for dlId in recList:    
-        print dlId
-        db.ncbi.insert(IdList=dlId)          
-        ncbi_file = open("NCBI_Files/"+dlId+".xml", "w")
-        response.flash="Downloading ID %s ..." %(dlId)
-        fetch_handle = Entrez.efetch(session.db, retmode="xml", id=dlId)
-        data = fetch_handle.read()
-        ncbi_file.write(data)
-        fetch_handle.close()
-        ncbi_file.close()
-        response.flash= "Going to download record %s" % (dlId)  
 
+    # Search if all Files are in DB (and if not then add them):
+    print "Updating Database..."
+    for elem in fileIdList:
+        if elem not in dbIdList:
+            db.ncbi.insert(IdList=elem)
+            
+
+    # Creating DB list again...
+    dbIdList=[]
+    for row in db(db.ncbi).select(db.ncbi.IdList):
+        dbIdList.append(row.IdList)
+    
+    print "%s Einträge in der DB" %(len(dbIdList))
+    
+    # TODO: Here something is wrong
+        
+    # ... and look which files to download
+    print "Comparing files with DB..."
+    print recList
+    print len(recList)
+    i=0
+    for elem in recList:
+        print elem
+        i+=1
+        print i 
+        if elem in dbIdList:
+            recList.remove(elem)
+            print "%s wurde aus der Liste entfernt!" %(elem)
+                            
+    print "Following Files are going to be downloaded: "
+    print recList
+            
+    # Download
+    dload=raw_input("Do you want to download these files?")    
+    
+    if dload=='y':
+    
+        for dlId in recList:    
+            print dlId
+            db.ncbi.insert(IdList=dlId)
+            try:         
+                ncbi_file = open("NCBI_Files/"+dlId+".xml", "w")
+            except:
+                print "Fehler beim öffnen der angeforderten Datei %s" %(dlId)
+            response.flash="Downloading ID %s ..." %(dlId)
+            fetch_handle = Entrez.efetch(session.db, retmode="xml", id=dlId)
+            data = fetch_handle.read()
+            ncbi_file.write(data)
+            fetch_handle.close()
+            ncbi_file.close()
+            response.flash= "Going to download record %s" % (dlId)  
+
+    elif dload=='parse':
+        pass
 
 def parse():
     
@@ -160,16 +185,36 @@ def parse():
     
     
     '''
-    
-    
-    for ID in db().select(db.ncbi.IdList):
-        file="NCBI_Files/"+ID.IdList+".xml"
-        
-        rec=SeqIO.read(file, "xml")
-        print "Nächster Eintrag: "
-        print rec
+    pars=raw_input("Do you want to parse the files?")
+    if pars=='y':
+        print "Parsing files..."
+        for ID in db().select(db.ncbi.IdList):
+            file=open("NCBI_Files/"+ID.IdList+".xml")
+            
+            rec=Entrez.read(file, "xml")
+            print "Nächster Eintrag: "
+            print rec
 
-def search():        
+def testsession():
+    
+    db.ncbi.truncate()
+    #~ 
+    #~ db.ncbi.insert(IdList="Testeintrag")
+#~ 
+    #~ dbIdList=[]
+    #~ for row in db(db.ncbi).select(db.ncbi.IdList):
+        #~ dbIdList.append(row.IdList)
+#~ 
+    #~ print dbIdList
+    redirect(URL('search'))
+
+def search():  
+    
+    ts=""
+    ts=raw_input("Run testsession?")
+    if ts=='y':
+        testsession()
+      
     # Hauptroutine. Here we start and forward to every single step (email, db, term, download, parse...) and come back here again after it's done.
     if not session.email:
         redirect(URL('email'))
@@ -181,10 +226,8 @@ def search():
 
     if not session.db:
         redirect(URL('choseDB'))
-        
-    cont=raw_input('Continue to create a list?  ')
-    if cont == 'yes':
-        download()
+
+    download()
                
     parse()
     
