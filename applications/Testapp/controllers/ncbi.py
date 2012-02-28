@@ -56,7 +56,7 @@ def choseDB():
     return dict(term1="Chose which DB to search", term2=form)
 
 def dlForm():
-
+    # Ask wheter you want to download the files, if yes --> download!
     rbtnYesNo = FORM(TABLE(TR('Download the files?',SELECT(['Yes', 'No'], _name="download",requires=IS_IN_SET(['Yes', 'No'])))), TR("",INPUT(_type="submit",_value="Proceed")))
 
     if rbtnYesNo.process().accepted:
