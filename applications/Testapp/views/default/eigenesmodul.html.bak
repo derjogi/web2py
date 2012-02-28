@@ -1,0 +1,4 @@
+
+{{extend 'layout.html'}}
+<h1>Dies ist das Template default/eigenesmodul.html</h1>
+{{=BEAUTIFY(response._vars)}}

@@ -1,0 +1,64 @@
+# -*- coding: utf-8 -*-
+
+from Bio import Entrez, SeqIO, SeqFeature
+from Bio.Seq import Seq
+import glob
+import os
+import traceback
+    
+def results():
+    handle=Entrez.einfo()
+    data=handle.read()
+    handle.close()
+        
+    return dict(results=data)            
+
+def search():
+        
+    if not session.email:
+        
+        email=FORM(INPUT(_name='email', requires=IS_NOT_EMPTY()), INPUT(_type='submit'))
+        if email.process().accepted:
+            session.email=email.vars.email
+            redirect(URL('search'))
+            #links=
+        return dict(formname="Email", form=email)
+
+    if not session.db_get:
+        
+        handle=Entrez.einfo()
+        record=Entrez.read(handle)
+       
+        for elem in record["DbList"]:
+            handle2=Entrez.einfo(db=elem)
+            record2=Entrez.read(handle2, validate=False)
+            print "\n"
+            print record2['DbInfo'].keys()
+            db.ncbi.insert(dbase=elem, description=record2['DbInfo']['Description'], fieldlist=record2['DbInfo']['FieldList'])
+        
+        session.db_get=True
+        
+        redirect(URL('search'))
+        
+    else:
+        form=SQLFORM.factory(Field('Database', requires=IS_IN_DB(db, 'ncbi.dbase','%(description)s')))
+        
+        #db.ncbi.truncate()
+        #session.db_get=None
+
+        if form.process().accepted:
+            session.db=form.vars.Database
+            response.flash="Database %s saved..." %(session.db)
+            form2=SQLTABLE(db().select(db.ncbi.ALL))
+
+
+            return dict(formname=session.db, form=form2)
+        
+        return dict(formname="Ergebnis: ", form=form)
+        
+        
+        #~ search=FORM(INPUT(_name='db', requires=IS_NOT_EMPTY()), INPUT(_type="submit"))
+        #~ if search.process().accepted:
+            #~ session.db=search.vars.db
+            #~ redirect(URL('results'))
+        #~ return dict(formname="Database", form=search)

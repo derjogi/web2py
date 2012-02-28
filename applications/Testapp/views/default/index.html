@@ -1,0 +1,9 @@
+{{left_sidebar_enabled=right_sidebar_enabled=False}}
+{{extend 'layout.html'}}
+
+<h1>{{=hello}} <a href='first'>{{=user_name}}</a>!</h1>
+<h2>You visited this page {{=counter}} times!</h2>
+
+
+{{block left_sidebar}}New Left Sidebar Content{{end}}
+{{block right_sidebar}}New Right Sidebar Content{{end}}

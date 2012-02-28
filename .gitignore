@@ -1,0 +1,3 @@
+NCBI_Files/*.xml
+applications/Testapp/errors/*
+!.gitignore
