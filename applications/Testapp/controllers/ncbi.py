@@ -18,7 +18,6 @@ def email():
         redirect(URL('search'))
     return dict(term1="Email", term2=email)
 
-
 def term():
     # Enter search term. Forward to 'search' --> choseDB. Come here from 'search'. 
     search=FORM(INPUT(_name='term', requires=IS_NOT_EMPTY()), INPUT(_type="submit"))
@@ -77,8 +76,6 @@ def dlForm():
     print db().select(db.ncbi.IdList)
 
     return dict(term0=db().select(db.ncbi.IdList), term1="Do you want to download the files?", term2=rbtnYesNo)    
-
-
     
 def download():
 
@@ -101,16 +98,12 @@ def download():
     ### Create Lists...
     # ... of IDs found on entrez:
     recList=record['IdList']    
-    print "\nThese records have been found: "
-    print recList
+    session.recList=recList
     
     # ...of entries in DB
     dbIdList=[]
     for row in db(db.ncbi).select(db.ncbi.IdList):
-        dbIdList.append(row.IdList)
-    print "\nThese Records are already in the DB: "
-    print dbIdList
-    
+        dbIdList.append(row.IdList)    
 
     # ...of Files in Folder: 
     dirList=os.listdir("NCBI_Files")
@@ -118,9 +111,6 @@ def download():
     for fname in dirList:
         splitted=fname.split('.')
         fileIdList.append(splitted[0])
-    print "\nThese Files are already downloaded: "
-    print fileIdList
-        
 
     # Search if all Files are in DB (and if not then add them):
     print "Updating Database..."
@@ -134,23 +124,10 @@ def download():
     for row in db(db.ncbi).select(db.ncbi.IdList):
         dbIdList.append(row.IdList)
     
-    print "%s Einträge in der DB" %(len(dbIdList))
-    
-    # TODO: Here something is wrong
-        
     # ... and look which files to download
     print "Comparing files with DB..."
-    print recList
-    print len(recList)
-    i=0
-    for elem in recList:
-        print elem
-        i+=1
-        print i 
-        if elem in dbIdList:
-            recList.remove(elem)
-            print "%s wurde aus der Liste entfernt!" %(elem)
-                            
+    recList=[dl for rec in recList if rec not in dbIdList]
+
     print "Following Files are going to be downloaded: "
     print recList
             
@@ -158,12 +135,11 @@ def download():
     dload=raw_input("Do you want to download these files?")    
     
     if dload=='y':
-    
+        ending=".xml"
         for dlId in recList:    
-            print dlId
             db.ncbi.insert(IdList=dlId)
             try:         
-                ncbi_file = open("NCBI_Files/"+dlId+".xml", "w")
+                ncbi_file = open("NCBI_Files/"+dlId+ending, "w")
             except:
                 print "Fehler beim öffnen der angeforderten Datei %s" %(dlId)
             response.flash="Downloading ID %s ..." %(dlId)
@@ -173,9 +149,6 @@ def download():
             fetch_handle.close()
             ncbi_file.close()
             response.flash= "Going to download record %s" % (dlId)  
-
-    elif dload=='parse':
-        pass
 
 def parse():
     
@@ -187,14 +160,29 @@ def parse():
     '''
     pars=raw_input("Do you want to parse the files?")
     if pars=='y':
+        i=0
         print "Parsing files..."
-        for ID in db().select(db.ncbi.IdList):
-            file=open("NCBI_Files/"+ID.IdList+".xml")
+        for ID in session.recList:
+            print ID
+            try:
+                file=open("NCBI_Files/"+ID+".xml")
+                rec=Entrez.read(file, "xml")
+                for entry in rec:
+                    print entry.keys()
+                    
+                    print "Länge: %s,\t Definition: %s" %(len(entry['GBSeq_sequence']), entry['GBSeq_definition'])
+                    print "Feature types\n %s: %s" %(entry['GBSeq_feature-table']['GBFeature_quals']['GBQualifier']['GBQualifier_name'], entry['GBSeq_feature-table']['GBFeature_quals']['GBQualifier']['GBQualifier_value'])
+                    
+                print "Nächster Eintrag: "
+#                print rec
+                i+=1
+                if i==3:
+                    break
+                
+            except IOError:
+                print "One corrupt file, probably the .gitignore. " 
+                        
             
-            rec=Entrez.read(file, "xml")
-            print "Nächster Eintrag: "
-            print rec
-
 def testsession():
     
     db.ncbi.truncate()
