@@ -162,16 +162,25 @@ def parse():
     if pars=='y':
         i=0
         print "Parsing files..."
+        logfile=open("logfile.log", "a")
+                
         for ID in session.recList:
             print ID
+            logfile.write("Nächster Eintrag: \n\n\n\n\n\n\n")
+            
             try:
                 file=open("NCBI_Files/"+ID+".xml")
                 rec=Entrez.read(file, "xml")
                 for entry in rec:
+                    logfile.writelines(str(entry)+'\n\n\n\n')
+                    
                     print entry.keys()
                     
                     print "Länge: %s,\t Definition: %s" %(len(entry['GBSeq_sequence']), entry['GBSeq_definition'])
-                    print "Feature types\n %s: %s" %(entry['GBSeq_feature-table']['GBFeature_quals']['GBQualifier']['GBQualifier_name'], entry['GBSeq_feature-table']['GBFeature_quals']['GBQualifier']['GBQualifier_value'])
+                    for elem in entry['GBSeq_feature-table']:
+                        print "Feature types\n %s: %s" %(['GBFeature_quals']['GBQualifier']['GBQualifier_name'], entry['GBSeq_feature-table']['GBFeature_quals']['GBQualifier']['GBQualifier_value'])
+                
+                    
                     
                 print "Nächster Eintrag: "
 #                print rec
@@ -182,7 +191,8 @@ def parse():
             except IOError:
                 print "One corrupt file, probably the .gitignore. " 
                         
-            
+        logfile.close
+                
 def testsession():
     
     db.ncbi.truncate()
